@@ -1,0 +1,13 @@
+.img-fill {
+    width: auto;
+    height: 100%;
+    object-fit: cover;
+}
+
+#search-input:focus {
+    border-color: #28a745 !important; /* Mengubah border saat fokus menjadi hijau */
+    box-shadow: 0 0 5px rgba(40, 167, 69, 0.5) !important; /* Menambahkan efek glow hijau */
+    outline: none !important; /* Menghilangkan outline biru default */
+}
+
+
