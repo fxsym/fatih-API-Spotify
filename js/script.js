@@ -87,6 +87,7 @@ async function getArtist(keyword, limit=1) {
 
 function updateArtist(artists) {
     const daftarArtists = document.getElementById('list-artists');
+    console.log('daftarArtists');
     daftarArtists.innerHTML = '';
     artists.forEach(function(data, i) {
         daftarArtists.innerHTML += `
