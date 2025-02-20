@@ -1,4 +1,3 @@
-console.log('Okai!');
 let token = '';
 async function getSpotifyToken() {
     const clientId = 'd6409319a2754191a82f9b977a701920';
@@ -87,7 +86,6 @@ async function getArtist(keyword, limit=1) {
 
 function updateArtist(artists) {
     const daftarArtists = document.getElementById('list-artists');
-    console.log('daftarArtists');
     daftarArtists.innerHTML = '';
     artists.forEach(function(data, i) {
         daftarArtists.innerHTML += `
