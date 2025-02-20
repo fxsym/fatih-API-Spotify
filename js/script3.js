@@ -1,20 +1,28 @@
 let token = '';
-$.ajax({
-    url: 'https://accounts.spotify.com/api/token',
-        type: 'post',
-        dataType: 'json',
+async function getSpotifyToken() {
+    const clientId = 'd6409319a2754191a82f9b977a701920';
+    const clientSecret = 'bbf768d5dcca49ed8aca46cc87ac0d5e';
+
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        data: $.param({
+        body: new URLSearchParams({
             'grant_type': 'client_credentials',
-            'client_id': 'd6409319a2754191a82f9b977a701920',
-            'client_secret': 'bbf768d5dcca49ed8aca46cc87ac0d5e'
-        }),
-        success: function(results){
-            token = results.access_token;
-        }
-});
+            'client_id': clientId,
+            'client_secret': clientSecret
+        })
+    });
+
+    if (response.ok) {
+        const results = await response.json();
+        token = results.access_token;
+    } else {
+        console.error('Gagal mendapatkan token:', response.statusText);
+    }
+}
+getSpotifyToken();
 
 function ubahDurasi(data){
     let durationMs = data; // Durasi dalam milidetik
@@ -45,192 +53,99 @@ function ubahGenre(data){
     return genre;
 }
 
-
-function searchTrack() {
-    $('#daftar-album').html('');
-    let hasil = $('#search-input').val();
-
-    $.ajax({
-        url: 'https://api.spotify.com/v1/search',
-        type: 'get',
-        dataType: 'json',
+function getApi(q, type, limit){
+    return fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}&limit=${encodeURIComponent(limit)}`, {
+        method: 'GET',
         headers: {
-            'Authorization': `Bearer ${token}`
-        },
-        data: {
-            'q': hasil,
-            'type': 'artist',
-            'limit': 1
-        },
-        success: function (result) {
-            let artists = result.artists.items;
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(response => response);
+};
 
-            if( artists && artists.length > 0) {
-                let artists = result.artists.items;
-                console.log(artists);
-                $.each(artists, function(i, data) {
-                    $('#daftar-album').append(`
-                        <div class="col-md-5">
-                            <div class="card mb-3" style="max-width: 540px;">
-                                <div class="row g-0 d-flex align-items-center"> <!-- Tambahkan d-flex align-items-center -->
-                                    <div class="col-4">
-                                        <img src="`+ data.images[0].url +`" class="img-fluid rounded-start" style="height: 100%; object-fit: cover;" alt="...">
-                                    </div>
-                                    <div class="col-8">
-                                        <div class="card-body">
-                                            <h5 class="card-title">`+ data.name +`</h5>
-                                            <h6 class="card-title">`+ ubahFollowes(data.followers.total) +`</h6>
-                                            <p>`+ ubahGenre(data.genres) +`</p>
-                                            <a href="#" class="card-link lihat-lagu text-success" data-bs-toggle="modal" data-bs-target="#exampleModal" data-id="`+ data.name +`">Lihat Lagu</a>
-                                        </div>
-                                    </div>
+const searchButton = document.getElementById('search-button');
+const inputKeyword = document.getElementById('search-input');
+
+searchButton.addEventListener('click', function () {
+    getArtist(inputKeyword.value, 1);
+});
+
+inputKeyword.addEventListener('keyup', function(e) {
+    if (e.key === 'Enter'){
+            getArtist(inputKeyword.value, 1);
+        }
+});
+
+async function getArtist(keyword, limit=1) {
+    const response = await getApi(keyword, 'artist', limit);
+    const artist = response.artists.items;
+    updateArtist(artist);
+}
+
+function updateArtist(artists) {
+    const daftarArtists = document.getElementById('list-artists');
+    daftarArtists.innerHTML = '';
+    artists.forEach(function(data, i) {
+        daftarArtists.innerHTML += `
+                <div class="col-md-5">
+                    <div class="card mb-3" style="max-width: 540px;">
+                        <div class="row g-0 d-flex align-items-center"> <!-- Tambahkan d-flex align-items-center -->
+                            <div class="col-4">
+                                <img src="`+ data.images[0].url +`" class="img-fluid rounded-start" style="height: 100%; object-fit: cover;" alt="...">
+                            </div>
+                            <div class="col-8">
+                                <div class="card-body">
+                                    <h5 class="card-title">`+ data.name +`</h5>
+                                    <h6 class="card-title">`+ ubahFollowes(data.followers.total) +`</h6>
+                                    <p>`+ ubahGenre(data.genres) +`</p>
+                                    <a href="#" class="card-link lihat-lagu text-success" data-bs-toggle="modal" data-bs-target="#exampleModal" data-id="`+ data.name +`">Lihat Lagu</a>
                                 </div>
                             </div>
                         </div>
-                        `)
-                })
-            $('#search-input').val('');
-
-            } else {
-                console.log("Gagal");
-            }
-        },
-        error: function (xhr, status, error) {
-            console.error('Error:', error);
-        }
-    })
+                    </div>
+                </div>
+            `;
+    });
+    document.getElementById('search-input').value = '';
 };
 
+function updateSongs(songs) {
+    const daftarsongs = document.getElementById('modal-boddy');
+    daftarsongs.innerHTML = '';
+    songs.forEach(function(data, i) {
+    daftarsongs.innerHTML += `
+        <div class="col-md-10 m-3">
+            <div class="card h-100 d-flex flex-row" style="max-width: 540px;">
+                <img src="`+ data.album.images[0].url +`" class="img-fluid rounded-start" style="width: 150px; height: 100%; object-fit: cover;" alt="...">
+                <div class="card-body">
+                    <h5 class="card-title">`+ data.name +`</h5>
+                    <h6 class="card-title">`+ data.artists[0].name +`</h6>
+                    <p>`+ ubahDurasi(data.duration_ms) +`</p>
+                    <a href="`+ data.external_urls.spotify +`" target="_blank">
+                        <button type="button" class="btn btn-outline-success">Putar di Spotify</button>
+                    </a>
+                </div>
+            </div>
+        </div>
+        `;
+    });
+};
 
-$('#search-button').on('click', function() {
-    searchTrack();
-});
-
-$('#search-input').on('keyup', function(e) {
-    if (e.which === 13){
-        searchTrack();
+document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('card-link')) {
+        const artistName = e.target.dataset.id;
+        const response = await getApi(artistName, 'track', 8);
+        const songs = response.tracks.items;
+        updateSongs(songs);
     }
 });
 
-
-$('.dropdown-item').on('click', function() {
-    $('#daftar-album').html('');
-    let kategori = $(this).html();
-    
-    $.ajax({
-        url: 'https://api.spotify.com/v1/search',
-        type: 'get',
-        dataType: 'json',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-        data: {
-            'q': kategori,
-            'type': 'artist',
-            'limit': 8
-        },
-        success: function (result) {
-            let artists = result.artists.items;
-
-            if( artists && artists.length > 0) {
-                let artists = result.artists.items;
-                console.log(artists);
-                $.each(artists, function(i, data) {
-                    $('#daftar-album').append(`
-                        <div class="col-md-5">
-                            <div class="card mb-3" style="max-width: 540px;">
-                                <div class="row g-0 d-flex align-items-center"> <!-- Tambahkan d-flex align-items-center -->
-                                    <div class="col-4">
-                                        <img src="`+ data.images[0].url +`" class="img-fluid rounded-start" style="height: 100%; object-fit: cover;" alt="...">
-                                    </div>
-                                    <div class="col-8">
-                                        <div class="card-body">
-                                            <h5 class="card-title">`+ data.name +`</h5>
-                                            <h6 class="card-title">`+ ubahFollowes(data.followers.total) +`</h6>
-                                            <p>`+ ubahGenre(data.genres) +`</p>
-                                            <a href="#" class="card-link lihat-lagu text-success" data-bs-toggle="modal" data-bs-target="#exampleModal" data-id="`+ data.name +`">Lihat Lagu</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        `)
-                })
-            $('#search-input').val('');
-            } else {
-                console.log("Gagal");
-            }
-        },
-        error: function (xhr, status, error) {
-            console.error('Error:', error);
-        }
-    });
-
-    $.getJSON('../JSON/film2.json', function(data) {
-        let film = data.movies;
-        let content = '';
-
-        $.each(film, function(i, data) {
-            let genre = data.Genre;
-            let genreArray = genre.split(", ");
-
-            if (genreArray.includes(kategori)) {
-
-            }
-        });
-
-        $('#daftar-film').html(content);
-    });
-});
-
-$('#daftar-album').on('click', '.lihat-lagu', function() {
-    $('#modal-boddy').html('');
-    hasil = $(this).data('id');
-    console.log(hasil);
-
-    $.ajax({
-        url: 'https://api.spotify.com/v1/search',
-        type: 'get',
-        dataType: 'json',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-        data: {
-            'q': hasil,
-            'type': 'track',
-            'limit': 8
-        },
-        success: function (result) {
-            let tracks = result.tracks.items;
-            console.log(tracks);
-
-            if( tracks && tracks.length > 0) {
-                let tracks = result.tracks.items;
-                $.each(tracks, function(i, data) {
-                    $('#modal-boddy').append(`
-                        <div class="col-md-10 m-3">
-                            <div class="card h-100 d-flex flex-row" style="max-width: 540px;">
-                                <img src="`+ data.album.images[0].url +`" class="img-fluid rounded-start" style="width: 150px; height: 100%; object-fit: cover;" alt="...">
-                                <div class="card-body">
-                                    <h5 class="card-title">`+ data.name +`</h5>
-                                    <h6 class="card-title">`+ data.artists[0].name +`</h6>
-                                    <p>`+ ubahDurasi(data.duration_ms) +`</p>
-                                    <a href="`+ data.external_urls.spotify +`" target="_blank">
-                                        <button type="button" class="btn btn-outline-success">Putar di Spotify</button>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        `)
-                })
-            $('#search-input').val('');
-
-            } else {
-                console.log("Gagal");
-            }
-        },
-        error: function (xhr, status, error) {
-            console.error('Error:', error);
-        }
+const dropdownItems = document.querySelectorAll('.dropdown-item');
+dropdownItems.forEach(btn => {
+    btn.addEventListener('click', function() {
+        const genreText = btn.innerText;
+        getArtist(genreText, 8);
     })
 });
