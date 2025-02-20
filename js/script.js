@@ -1,4 +1,4 @@
-console.log('Ok!');
+console.log('Okai!');
 let token = '';
 async function getSpotifyToken() {
     const clientId = 'd6409319a2754191a82f9b977a701920';
